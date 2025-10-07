@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Face Login</title>
+
+   <style>
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364);
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 60px;
+  }
+
+  h2 {
+    font-size: 2.2em;
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+    color: #00e5ff;
+    letter-spacing: 1px;
+  }
+
+  form {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 40px 50px;
+    box-shadow: 0 0 25px rgba(0, 229, 255, 0.3);
+    transition: all 0.3s ease-in-out;
+  }
+
+  input {
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    width: 250px;
+    font-size: 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    transition: all 0.3s;
+  }
+
+  input::placeholder {
+    color: #cfd8dc;
+  }
+
+  input:focus {
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 10px #00e5ff;
+  }
+
+  button {
+    background: linear-gradient(90deg, #00e5ff, #00c853);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 40px;
+    font-weight: bold;
+    font-size: 1.05em;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: 0.3s;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+  }
+
+  button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(0, 229, 255, 0.8);
+  }
+
+  video {
+    border: 3px solid #00e5ff;
+    border-radius: 20px;
+    width: 480px;
+    height: 360px;
+    margin-top: 30px;
+    display: none;
+    box-shadow: 0 0 25px rgba(0, 229, 255, 0.3);
+  }
+
+  #status {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #dfe6e9;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+  }
+
+  @media (max-width: 600px) {
+    video {
+      width: 90%;
+      height: auto;
+    }
+
+    form {
+      padding: 30px;
+      width: 85%;
+    }
+
+    input {
+      width: 100%;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <h2>Login with Face & Blink</h2>
+
+  <form id="loginForm">
+    <input type="text" name="username" id="username" placeholder="Enter Username" required><br>
+    <button type="submit" id="startBtn">Start Verification</button>
+  </form>
+
+  <video id="video" autoplay></video>
+  <p id="status"></p>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        alert("Please enter your username.");
+        return;
+      }
+
+      // Send username to server
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: `username=${encodeURIComponent(username)}`
+      });
+
+      if (res.redirected) {
+        startCamera();
+      } else {
+        const text = await res.text();
+        alert(text);
+      }
+    });
+
+    async function startCamera() {
+      form.style.display = "none";
+      video.style.display = "block";
+      status.innerHTML = "Starting camera...";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        status.innerHTML = "Camera active. Blink to verify your face!";
+        detectBlink();
+      } catch (err) {
+        console.error(err);
+        status.innerHTML = "❌ Failed to access camera.";
+      }
+    }
+
+    async function detectBlink() {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const interval = setInterval(async () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = canvas.toDataURL("image/jpeg");
+
+        const res = await fetch("/analyze_frame", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ image: imgData })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          status.innerHTML = "⚠️ " + data.error;
+          return;
+        }
+
+        if (data.eye_closed) {
+          status.innerHTML = "👁️ Blink detected! Checking face...";
+        }
+
+        if (data.face && data.eye_closed && data.authenticated) {
+          status.innerHTML = "✅ Face Verified! Access Granted.";
+          clearInterval(interval);
+          setTimeout(() => window.location.href = "/", 1500);
+        }
+
+        if (data.face && data.eye_closed && !data.authenticated) {
+          status.innerHTML = "❌ Face not recognized. Try again.";
+        }
+
+      }, 500);
+    }
+  </script>
+</body>
+</html>

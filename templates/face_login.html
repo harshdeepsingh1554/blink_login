@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Face</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      padding-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Face Verification — Blink to Login</h2>
+  <img src="{{ url_for('video_feed', mode='login') }}" width="640" height="480">
+  <p>Please blink to verify your liveness and login.</p>
+</body>
+</html>

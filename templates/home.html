@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #43cea2, #185a9d);
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      padding-top: 100px;
+    }
+    a {
+      color: #fff;
+      background: rgba(0,0,0,0.3);
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+    }
+    a:hover { background: rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body>
+  <h1>✅ Face Authenticated!</h1>
+  <p>Welcome, {{ session.get('username') }} 👋</p>
+  <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>

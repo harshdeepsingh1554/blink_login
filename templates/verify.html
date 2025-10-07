@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Blink - Face Auth</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+  <div class="bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-lg text-center">
+    <h2 class="text-2xl font-bold mb-6">👁 Blink Verification</h2>
+    <video id="video" autoplay muted playsinline class="rounded-xl border-2 border-gray-700 shadow-md w-full"></video>
+    <p id="status" class="mt-4 text-lg">Waiting...</p>
+    <div class="mt-6 flex justify-between">
+      <a href="{{ url_for('home') }}" class="bg-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-700 transition">Home</a>
+      <a href="{{ url_for('logout') }}" class="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition">Logout</a>
+    </div>
+  </div>
+
+  <script>
+    const video=document.getElementById("video"), status=document.getElementById("status");
+    navigator.mediaDevices.getUserMedia({video:true}).then(s=>video.srcObject=s);
+    function snap(){
+      const c=document.createElement("canvas");
+      c.width=video.videoWidth;c.height=video.videoHeight;
+      c.getContext("2d").drawImage(video,0,0);
+      return c.toDataURL("image/jpeg");
+    }
+    async function send(){
+      let res=await fetch("/analyze_frame",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:snap()})});
+      let js=await res.json();
+      if(js.face){
+        if(js.verified){status.innerHTML="<span class='text-green-400 font-bold'>✅ Verified with Blink!</span>";}
+        else{status.innerHTML=`<span class='text-yellow-400'>Blinks: ${js.blinks} (Need at least 1)</span>`;}
+      }else{status.innerHTML="<span class='text-red-400'>No face detected</span>";}
+    }
+    setInterval(send,800);
+  </script>
+</body>
+</html>
